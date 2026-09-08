@@ -23,7 +23,7 @@ export const getUserById: RequestHandler = async (req, res) => {
     const data = await fs.readFile(usersPath, 'utf-8');
     const users = JSON.parse(data);
 
-    const user = users.find((u: { _id: string }) => u._id === id);
+    const user = users.find((user: { _id: string }) => user._id === id);
 
     if (!user) {
       res.status(404).json({ message: 'ID de usuario no encontrado' });
@@ -31,7 +31,7 @@ export const getUserById: RequestHandler = async (req, res) => {
     }
 
     res.json(user);
-     } catch { 
+     } catch {
     res.status(500).json({ message: 'Ha ocurrido un error en el servidor' });
   }
 };
