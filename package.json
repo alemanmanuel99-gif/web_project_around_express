@@ -22,7 +22,8 @@
   },
   "homepage": "https://github.com/alemanmanuel99-gif/web_project_around_express#readme",
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "mongoose": "^9.10.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
