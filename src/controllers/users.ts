@@ -1,37 +1,71 @@
-import type { RequestHandler } from 'express';
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import type { Request, Response } from 'express';
+import User from '../models/user.js';
 
-// Construimos de forma segura la ruta absoluta al JSON usando node:path e import.meta.dirname
-const usersPath = path.join(import.meta.dirname, '../../data/users.json');
-
-export const getUsers: RequestHandler = async (req, res) => {
-  try {
-    // Leemos el archivo de forma asíncrona como exige el PDF
-    const data = await fs.readFile(usersPath, 'utf-8');
-    const users = JSON.parse(data);
-    res.json(users);
-    } catch {
-    res.status(500).json({ message: 'Ha ocurrido un error en el servidor' });
-  }
-
+export const getUsers = async (req: Request, res: Response) => {
+  const users = await User.find({});
+  res.send(users);
 };
 
-export const getUserById: RequestHandler = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const data = await fs.readFile(usersPath, 'utf-8');
-    const users = JSON.parse(data);
+export const getUserById = async (req: Request, res: Response) => {
+  const user = await User.findById(req.params.id);
 
-    const user = users.find((user: { _id: string }) => user._id === id);
-
-    if (!user) {
-      res.status(404).json({ message: 'ID de usuario no encontrado' });
-      return;
-    }
-
-    res.json(user);
-     } catch {
-    res.status(500).json({ message: 'Ha ocurrido un error en el servidor' });
+  if (!user) {
+    throw Object.assign(new Error('No se encontró ningún usuario con ese id'), {
+      statusCode: 404,
+    });
   }
+
+  res.send(user);
+};
+
+export const getCurrentUser = async (req: Request, res: Response) => {
+  const user = await User.findById(req.user?._id);
+
+  if (!user) {
+    throw Object.assign(new Error('No se encontró ningún usuario con ese id'), {
+      statusCode: 404,
+    });
+  }
+
+  res.send(user);
+};
+
+export const createUser = async (req: Request, res: Response) => {
+  const { name, about, avatar } = req.body;
+  const user = await User.create({ name, about, avatar });
+  res.status(201).send(user);
+};
+
+export const updateProfile = async (req: Request, res: Response) => {
+  const { name, about } = req.body;
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    { name, about },
+    { new: true, runValidators: true },
+  );
+
+  if (!user) {
+    throw Object.assign(new Error('No se encontró ningún usuario con ese id'), {
+      statusCode: 404,
+    });
+  }
+
+  res.send(user);
+};
+
+export const updateAvatar = async (req: Request, res: Response) => {
+  const { avatar } = req.body;
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    { avatar },
+    { new: true, runValidators: true },
+  );
+
+  if (!user) {
+    throw Object.assign(new Error('No se encontró ningún usuario con ese id'), {
+      statusCode: 404,
+    });
+  }
+
+  res.send(user);
 };

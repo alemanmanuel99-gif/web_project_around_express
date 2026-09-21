@@ -1,17 +1,80 @@
-import type { RequestHandler } from 'express';
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import type { Request, Response } from 'express';
+import Card from '../models/cards.js';
 
-// Construimos de forma segura la ruta absoluta al JSON de tarjetas
-const cardsPath = path.join(import.meta.dirname, '../../data/cards.json');
+export const getCards = async (req: Request, res: Response) => {
+  const cards = await Card.find({});
+  const userId = req.user?._id;
 
-export const getCards: RequestHandler = async (req, res) => {
-  try {
-    // Leemos de forma asíncrona con el módulo de promesas
-    const data = await fs.readFile(cardsPath, 'utf-8');
-    const cards = JSON.parse(data);
-    res.json(cards);
-  } catch { // 👈 Quitamos '(error)'
-    res.status(500).json({ message: 'Ha ocurrido un error en el servidor' });
+  const cardsWithIsLiked = cards.map((card) => ({
+    ...card.toObject(),
+    isLiked: card.likes.some((id) => id.toString() === userId),
+  }));
+
+  res.send(cardsWithIsLiked);
+};
+
+export const createCard = async (req: Request, res: Response) => {
+  const { name, link } = req.body;
+  const owner = req.user?._id;
+
+  if (!owner) {
+    throw Object.assign(new Error('No autorizado'), {
+      statusCode: 401,
+    });
   }
+
+  const card = await Card.create({ name, link, owner });
+  res.status(201).send({ ...card.toObject(), isLiked: false });
+};
+
+export const deleteCard = async (req: Request, res: Response) => {
+  const card = await Card.findByIdAndDelete(req.params.id);
+
+  if (!card) {
+    throw Object.assign(new Error('No se encontró ninguna tarjeta con ese id'), {
+      statusCode: 404,
+    });
+  }
+
+  res.send({ message: 'Tarjeta eliminada correctamente' });
+};
+
+export const likeCard = async (req: Request, res: Response) => {
+  const card = await Card.findByIdAndUpdate(
+    req.params.id,
+    { $addToSet: { likes: req.user?._id } },
+    { new: true },
+  );
+
+  if (!card) {
+    throw Object.assign(new Error('No se encontró ninguna tarjeta con ese id'), {
+      statusCode: 404,
+    });
+  }
+
+  const userId = req.user?._id;
+  res.send({
+    ...card.toObject(),
+    isLiked: card.likes.some((id) => id.toString() === userId),
+  });
+};
+
+export const dislikeCard = async (req: Request, res: Response) => {
+  const card = await Card.findByIdAndUpdate(
+    req.params.id,
+    { $pull: { likes: req.user?._id } },
+    { new: true },
+  );
+
+  if (!card) {
+    throw Object.assign(new Error('No se encontró ninguna tarjeta con ese id'), {
+      statusCode: 404,
+    });
+  }
+
+  const userId = req.user?._id;
+  res.send({
+    ...card.toObject(),
+    isLiked: card.likes.some((id) => id.toString() === userId),
+  });
 };

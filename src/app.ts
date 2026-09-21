@@ -1,16 +1,30 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import router from './routes/index.js';
-
+import { errorHandler } from './middleware/error-handler.js';
 
 const app = express();
 const PORT = 3000;
 
-// Middlewares obligatorios para procesar datos
+mongoose
+  .connect('mongodb://localhost:27017/aroundb')
+  .then(() => console.warn('Conectado a la base de datos aroundb'))
+  .catch((err) => console.error('Error al conectar a MongoDB', err));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Montamos el sistema de rutas centralizado
+app.use((req, res, next) => {
+  req.user = {
+    _id: '6ab071665e3bffbe52a9bee7', // ID de usuario simulado
+  };
+
+  next();
+});
+
 app.use(router);
+
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.warn(`Servidor ejecutándose en el puerto ${PORT}`);
